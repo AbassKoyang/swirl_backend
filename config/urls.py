@@ -22,4 +22,6 @@ urlpatterns = [
     path('api/', include('apps.core.urls')),
     path('api/', include('apps.blogs.urls')),
     path('api/search/', include('apps.search.urls')),
+    path('api/notifications/', include('apps.notifications.urls')),
+    path('api/feeds/', include('apps.feeds.urls')),
 ]

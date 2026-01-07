@@ -66,6 +66,7 @@ class Post(models.Model):
     comment_count = models.PositiveIntegerField(default=0)
     reaction_count = models.PositiveIntegerField(default=0)
     bookmark_count = models.PositiveIntegerField(default=0)
+    views_count = models.PositiveIntegerField(default=0)
     is_deleted = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -85,6 +86,7 @@ class Comment(models.Model):
     content = models.TextField()
     reply_count = models.PositiveIntegerField(default=0)
     reaction_count = models.PositiveIntegerField(default=0)
+    views_count = models.PositiveIntegerField(default=0)
     parent = models.ForeignKey(
         "self",
         null=True,

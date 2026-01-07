@@ -21,8 +21,8 @@ class PostSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Post
-        fields = ['id', 'content', 'title', 'author', 'tags', 'category', 'category_id', 'slug', 'status', 'created_at', 'updated_at' ]
-        read_only_fields = ['author', 'category']
+        fields = ['id', 'content', 'title', 'author', 'tags', 'category', 'category_id', 'slug', 'status', 'comment_count', 'reaction_count', 'bookmark_count', 'views_count', 'created_at', 'updated_at' ]
+        read_only_fields = ['author', 'category', 'comment_count', 'reaction_count', 'bookmark_count', 'views_count']
     def create(self, validated_data):
         validated_data['author'] = self.context['request'].user
         return super().create(validated_data)
@@ -43,8 +43,8 @@ class CommentSerializer(serializers.ModelSerializer):
     )
     class Meta:
         model = Comment
-        fields = ['id', 'post', 'user', 'content', 'parent_id', 'created_at', 'updated_at']
-        read_only_fields = ['post', 'user', 'created_at', 'updated_at']
+        fields = ['id', 'post', 'user', 'content', 'parent_id', 'reply_count', 'reaction_count', 'views_count', 'created_at', 'updated_at']
+        read_only_fields = ['post', 'user', 'reply_count', 'reaction_count', 'views_count', 'created_at', 'updated_at']
 
 class ReactionSerializer(serializers.ModelSerializer):
     user = UserSummarySerializer(read_only=True)

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User
+from .models import User, Follow
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.http import urlsafe_base64_decode
@@ -50,3 +50,12 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         user.set_password(password)
         user.save()
         return user
+
+class FollowSerializer(serializers.ModelSerializer):
+    follower = UserSummarySerializer(read_only=True)
+    following = UserSummarySerializer(read_only=True)
+    
+    class Meta:
+        model = Follow
+        fields = ['id', 'follower', 'following', 'created_at']
+        read_only_fields = ['follower', 'following', 'created_at']

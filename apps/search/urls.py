@@ -3,5 +3,7 @@ from . import views
 
 urlpatterns = [
     path('posts/', views.PostSearchView.as_view(), name='search-posts'),
+    path('comments/', views.CommentSearchView.as_view(), name='search-comments'),
+    path('bookmarks/', views.BookmarkSearchView.as_view(), name='search-bookmarks'),
 ]
 

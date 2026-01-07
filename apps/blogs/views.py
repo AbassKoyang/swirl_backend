@@ -1,9 +1,15 @@
 
 from django.db.models import F
 from rest_framework import generics, filters, permissions
+from rest_framework.response import Response
 from django.contrib.contenttypes.models import ContentType
 
 from .permissions import IsCommentOwner, IsOwner, IsBookmarkOwner
+from .throttles import (
+    PostCreateRateThrottle, PostUpdateRateThrottle, PostReadRateThrottle, PostReadAnonRateThrottle,
+    CommentCreateRateThrottle, ReactionRateThrottle, BookmarkRateThrottle
+)
+from apps.notifications.utils import create_notification
 
 from .serializers import CommentSerializer, PostSerializer, CategorySerializer, ReactionSerializer, BookmarkSerializer
 
@@ -16,6 +22,13 @@ class PostsListCreateView(generics.ListCreateAPIView):
     filter_backends = [filters.SearchFilter]
     search_fields = ['title', 'content']
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    
+    def get_throttles(self):
+        if self.request.method == 'GET':
+            if self.request.user.is_authenticated:
+                return [PostReadRateThrottle()]
+            return [PostReadAnonRateThrottle()]
+        return [PostCreateRateThrottle()]
     
 
     def get_queryset(self):
@@ -42,6 +55,7 @@ class PostsUpdateView(generics.UpdateAPIView):
     queryset= Post.objects.all()
     serializer_class = PostSerializer
     permission_classes = [IsOwner]
+    throttle_classes = [PostUpdateRateThrottle]
 
     lookup_field = 'pk'
     lookup_url_kwarg='id'
@@ -68,14 +82,29 @@ class PostRetrieveView(generics.RetrieveAPIView):
     queryset= Post.objects.all()
     serializer_class = PostSerializer
     permission_classes = [IsOwner]
+    throttle_classes = [PostReadRateThrottle]
     lookup_field = 'pk'
     lookup_url_kwarg='id'
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        # Increment views count
+        Post.objects.filter(pk=instance.pk).update(views_count=F('views_count') + 1)
+        # Refresh instance to get updated views_count
+        instance.refresh_from_db()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
 
 
 class CommentsListCreateView(generics.ListCreateAPIView):
     serializer_class = CommentSerializer
     queryset = Comment.objects.all()
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    
+    def get_throttles(self):
+        if self.request.method == 'GET':
+            return [PostReadRateThrottle()]
+        return [CommentCreateRateThrottle()]
 
     def get_queryset(self):
         post_id = self.kwargs["id"]
@@ -84,9 +113,15 @@ class CommentsListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         post_id = self.kwargs["id"]
         post = generics.get_object_or_404(Post, pk=post_id)
-        serializer.save(post=post, user=self.request.user)
+        comment = serializer.save(post=post, user=self.request.user)
         Post.objects.filter(pk=post_id).update(
             comment_count=F("comment_count") + 1
+        )
+        create_notification(
+            user=post.author,
+            actor=self.request.user,
+            action_type='comment',
+            target_object=post
         )
 
 class RetrieveCommentView(generics.RetrieveAPIView):
@@ -95,6 +130,24 @@ class RetrieveCommentView(generics.RetrieveAPIView):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     lookup_field = 'pk'
     lookup_url_kwarg = 'id'
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        # Increment views count
+        Comment.objects.filter(pk=instance.pk).update(views_count=F('views_count') + 1)
+        # Refresh instance to get updated views_count
+        instance.refresh_from_db()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        # Increment views count
+        Comment.objects.filter(pk=instance.pk).update(views_count=F('views_count') + 1)
+        # Refresh instance to get updated views_count
+        instance.refresh_from_db()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
 
 class UpdateCommentView(generics.UpdateAPIView):
     queryset = Comment.objects.all()
@@ -122,6 +175,7 @@ class RepliesListCreateView(generics.ListCreateAPIView):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    throttle_classes = [CommentCreateRateThrottle]
 
     def get_queryset(self):
         return Comment.objects.filter(parent_id=self.kwargs['id']).select_related('user')
@@ -129,7 +183,7 @@ class RepliesListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         user = self.request.user
         parent = generics.get_object_or_404(Comment, pk=self.kwargs['id'])
-        serializer.save(
+        reply = serializer.save(
             user=user,
             parent=parent,
             post=parent.post
@@ -138,10 +192,21 @@ class RepliesListCreateView(generics.ListCreateAPIView):
         Comment.objects.filter(pk=parent.pk).update(
             reply_count=F("reply_count") + 1
         )
+        create_notification(
+            user=parent.user,
+            actor=user,
+            action_type='reply',
+            target_object=parent
+        )
 
 class PostReactionListCreateView(generics.ListCreateAPIView):
     serializer_class = ReactionSerializer
     permission_classes = [permissions.AllowAny]
+    
+    def get_throttles(self):
+        if self.request.method == 'GET':
+            return [PostReadRateThrottle()]
+        return [ReactionRateThrottle()]
     
     def get_queryset(self):
         reaction_type = self.request.query_params
@@ -177,7 +242,7 @@ class PostReactionListCreateView(generics.ListCreateAPIView):
             reaction.reaction_type = reaction_type
             reaction.save(update_fields=["reaction_type"])
         else:
-            serializer.save(
+            reaction = serializer.save(
                 user=self.request.user,
                 content_type=post_type,
                 object_id=post.id
@@ -185,10 +250,21 @@ class PostReactionListCreateView(generics.ListCreateAPIView):
             Post.objects.filter(pk=post_id).update(
                 reaction_count=F("reaction_count") + 1
             )
+            create_notification(
+                user=post.author,
+                actor=self.request.user,
+                action_type='reaction',
+                target_object=post
+            )
 
 class CommentReactionListCreateView(generics.ListCreateAPIView):
     serializer_class = ReactionSerializer
     permission_classes = [permissions.AllowAny]
+    
+    def get_throttles(self):
+        if self.request.method == 'GET':
+            return [PostReadRateThrottle()]
+        return [ReactionRateThrottle()]
     
     def get_queryset(self):
         reaction_type = self.request.query_params
@@ -224,13 +300,19 @@ class CommentReactionListCreateView(generics.ListCreateAPIView):
             reaction.reaction_type = reaction_type
             reaction.save(update_fields=["reaction_type"])
         else:
-            serializer.save(
+            reaction = serializer.save(
                 user=self.request.user,
                 content_type=comment_type,
                 object_id=comment.id
             )
             Comment.objects.filter(pk=comment_id).update(
                 reaction_count=F("reaction_count") + 1
+            )
+            create_notification(
+                user=comment.user,
+                actor=self.request.user,
+                action_type='reaction',
+                target_object=comment
             )
 
 class CategoryListCreateView(generics.ListCreateAPIView):
@@ -245,18 +327,25 @@ class BookmarkCreateView(generics.CreateAPIView):
     queryset = Bookmark.objects.all()
     serializer_class = BookmarkSerializer
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [BookmarkRateThrottle]
 
 
     def perform_create(self, serializer):
         post_id = self.kwargs['id']
         post = generics.get_object_or_404(Post, pk=post_id)
         if post:
-            if post:
-                serializer.save(user=self.request.user, post=post)
-                Post.objects.filter(
-                    pk=post_id).update(
-                    bookmark_count=F("bookmark_count") + 1
-                )
+            bookmark = serializer.save(user=self.request.user, post=post)
+            Post.objects.filter(
+                pk=post_id).update(
+                bookmark_count=F("bookmark_count") + 1
+            )
+            # Create notification for post author
+            create_notification(
+                user=post.author,
+                actor=self.request.user,
+                action_type='bookmark',
+                target_object=post
+            )
 
 class BookmarkDeleteView(generics.DestroyAPIView):
     queryset = Bookmark.objects.all()
