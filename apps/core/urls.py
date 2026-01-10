@@ -8,11 +8,16 @@ from .views import CustomTokenObtainPairView
 
 urlpatterns = [
     path('auth/register/', views.RegisterUser.as_view(), name='register'),
-    path('auth/password-reset/', views.PasswordResetRequestView.as_view()),
-    path('auth/password-reset/confirm/', views.PasswordResetConfirmView.as_view()),
+    path('auth/password-reset/', views.PasswordResetRequestView.as_view(), name='password-reset'),
+    path('auth/password-reset/confirm/', views.PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
+
     path('auth/google_login/', views.google_login, name='google-login'),
-    path('auth/token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+
+    path('auth/login/', views.CustomTokenObtainPairView.as_view(), name='token-obtain-pair'),
+    path('auth/refresh/', views.CookieTokenRefreshView.as_view(), name='token-refresh'),
+    path('auth/logout/', views.LogoutView.as_view(), name='logout'),
+    path('auth/me/', views.MeView.as_view(), name='me'),
+
     path('users/<int:id>/', views.RetrieveUser.as_view(), name='retrieve-user'),
     path('users/<int:id>/update/', views.UpdateUser.as_view(), name='update-user'),
     path('users/<int:id>/delete/', views.DeleteUser.as_view(), name='delete-user'),

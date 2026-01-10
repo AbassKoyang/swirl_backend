@@ -57,6 +57,7 @@
     <h2>Welcome</h2>
     <p>Sign in to your account</p>
     <div id="googleSignInDiv" class="google-button"></div>
+    <button id="fetchUserDataButton">Fetch user data</button>
     <div id="loading" class="loading" style="display: none;">Signing in…</div>
     <div id="error" class="error" style="display: none;"></div>
     <div id="success" class="success" style="display: none;"></div>
@@ -124,11 +125,18 @@
         loadingEl.style.display = "none";
       });
     }
+
+    const fetchUserDataButton = document.getElementById("fetchUserDataButton");
+    fetchUserDataButton.addEventListener("click", () => {
+      fetch(`${api}/api/auth/me/`, { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => console.log(data))
+    });
     
     window.onload = () => {
       if (window.google && window.google.accounts) {
         window.google.accounts.id.initialize({
-          client_id: "",
+          client_id: "775778819448-2vu319o5avovcstoeii8bn93502n06li.apps.googleusercontent.com",
           callback: handleCallbackResponse
         });
         

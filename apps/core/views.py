@@ -14,7 +14,7 @@ from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 from django.core.mail import send_mail
 from rest_framework.views import APIView
-from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .permissions import IsProfileOwner
 from .throttles import AuthRateThrottle, AuthAnonRateThrottle, UserActionRateThrottle, ReadOnlyRateThrottle
 from apps.notifications.utils import create_notification
@@ -35,6 +35,39 @@ class RegisterUser(generics.CreateAPIView):
     serializer_class = UserSerializer
     permission_classes = [AllowAny]
     throttle_classes = [AuthAnonRateThrottle]
+
+    def post(self, request):
+        serializer = UserSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = serializer.save()
+
+        refresh = RefreshToken.for_user(user)
+        response = Response({
+            "status": True,
+            "user": UserSerializer(user).data
+        })
+
+        response.set_cookie(
+            key="access_token",
+            value=str(refresh.access_token),
+            httponly=True,
+            secure=False,
+            samesite="Lax",
+            max_age=60 * 60 * 24,
+            path='/'
+        )
+
+        response.set_cookie(
+            key="refresh_token",
+            value=str(refresh),
+            httponly=True,
+            secure=False,
+            samesite="Lax",
+            max_age=60 * 60 * 24,
+            path='/'
+        )
+        return response
     
     def perform_create(self, serializer):
         user = serializer.save()
@@ -73,6 +106,13 @@ class DeleteUser(generics.DestroyAPIView):
 
     lookup_field = 'pk'
     lookup_url_kwarg='id'
+
+class MeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data)
 
 
 @api_view(["POST"])
@@ -128,17 +168,35 @@ def google_login(request):
                     "error": "User needs to sign in through email",
                     "status": False
                 }, status=status.HTTP_403_FORBIDDEN)
+      
         refresh = RefreshToken.for_user(user)
-        return Response(
-            {
-                "tokens": {
-                    "access": str(refresh.access_token),
-                    "refresh": str(refresh),
-                },
-                "status": True
-            },
-            status=status.HTTP_200_OK
+
+        response = Response({
+            "status": True,
+            "message": "Google login successful"
+        })
+
+        response.set_cookie(
+            key="access_token",
+            value=str(refresh.access_token),
+            httponly=True,
+            secure=False,
+            samesite="Lax",
+            max_age=60 * 60 * 24,
+            path='/'
         )
+
+        response.set_cookie(
+            key="refresh_token",
+            value=str(refresh),
+            httponly=True,
+            secure=False,
+            samesite="Lax",
+            max_age=60 * 60 * 24,
+            path='/'
+        )
+
+        return response
     except ValueError:
         return Response({"error": "Invalid token","status":False}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -171,6 +229,18 @@ class PasswordResetRequestView(APIView):
             status=status.HTTP_200_OK
         )
 
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        response = Response({
+            "status": True,
+            "message": "Logged out successfully"
+        })
+        response.delete_cookie("access_token")
+        response.delete_cookie("refresh_token")
+        return response
+
 
 class PasswordResetConfirmView(APIView):
     permission_classes = [AllowAny]
@@ -187,11 +257,37 @@ class PasswordResetConfirmView(APIView):
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
-    """
-    Custom token view that creates a notification on first login.
-    """
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
+
+        if response.status_code == 200:
+            access = response.data["access"]
+            refresh = response.data["refresh"]
+
+            response.set_cookie(
+                key="access_token",
+                value=access,
+                httponly=True,
+                secure=False, 
+                samesite="Lax",
+                max_age=60 * 60 * 24,
+                path='/'
+            )
+
+            response.set_cookie(
+                key="refresh_token",
+                value=refresh,
+                httponly=True,
+                secure=False,
+                samesite="Lax",
+                max_age=60 * 60 * 24,
+                path='/'
+            )
+            response.data = {
+                "status": True,
+                "message": "Login successful"
+            }
+
         
         if response.status_code == 200:
             email = request.data.get('email')
@@ -219,6 +315,30 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         
         return response
 
+class CookieTokenRefreshView(TokenRefreshView):
+    def post(self, request, *args, **kwargs):
+        refresh_token = request.COOKIES.get("refresh_token")
+
+        if not refresh_token:
+            return Response({"detail": "No refresh token"}, status=401)
+
+        request.data["refresh"] = refresh_token
+        response = super().post(request, *args, **kwargs)
+
+        if response.status_code == 200:
+            response.set_cookie(
+                key="access_token",
+                value=response.data["access"],
+                httponly=True,
+                secure=False,
+                samesite="None",
+            )
+            response.data = {
+                "status": True,
+                "message": "Token refreshed"
+            }
+
+        return response
 
 class FollowUserView(APIView):
     permission_classes = [IsAuthenticated]
