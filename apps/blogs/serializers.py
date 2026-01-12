@@ -21,7 +21,7 @@ class PostSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Post
-        fields = ['id', 'content', 'title', 'author', 'tags', 'category', 'category_id', 'slug', 'status', 'comment_count', 'reaction_count', 'bookmark_count', 'views_count', 'created_at', 'updated_at' ]
+        fields = ['id', 'content', 'title', 'author', 'tags', 'category', 'category_id', 'slug', 'thumbnail', 'status', 'comment_count', 'reaction_count', 'bookmark_count', 'views_count', 'created_at', 'updated_at' ]
         read_only_fields = ['author', 'category', 'comment_count', 'reaction_count', 'bookmark_count', 'views_count']
     def create(self, validated_data):
         validated_data['author'] = self.context['request'].user
@@ -30,7 +30,7 @@ class PostSerializer(serializers.ModelSerializer):
 class PostSummarySerializer(serializers.ModelSerializer):
     class Meta:
         model = Post
-        fields = ['id', 'title', 'slug']
+        fields = ['id', 'title', 'slug', 'thumbnail', 'created_at', 'updated_at']
 
 class CommentSerializer(serializers.ModelSerializer):
     user = UserSummarySerializer(read_only=True)

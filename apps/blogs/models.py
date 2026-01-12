@@ -62,6 +62,7 @@ class Post(models.Model):
     title = models.CharField(max_length=225)
     slug = models.SlugField(unique=True)
     content = models.TextField(blank=True)
+    thumbnail = models.URLField(blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICE, default=DRAFT)
     comment_count = models.PositiveIntegerField(default=0)
     reaction_count = models.PositiveIntegerField(default=0)

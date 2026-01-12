@@ -23,7 +23,7 @@ class PersonalizedFeedView(generics.ListAPIView):
         
         queryset = Post.objects.filter(
             author_id__in=following_ids,
-            status='published',
+            status='draft',
             is_deleted=False
         ).select_related('author', 'category').prefetch_related('tags')
         
@@ -53,7 +53,7 @@ class TrendingFeedView(generics.ListAPIView):
             threshold = now - timedelta(hours=24)
         
         queryset = Post.objects.filter(
-            status='published',
+            status='draft',
             is_deleted=False,
             created_at__gte=threshold
         ).select_related('author', 'category').prefetch_related('tags')
@@ -75,7 +75,7 @@ class RecentFeedView(generics.ListAPIView):
         return [FeedAnonRateThrottle()]
 
     def get_queryset(self):
-        queryset = Post.objects.is_published().select_related('author', 'category').prefetch_related('tags')
+        queryset = Post.objects.is_draft().select_related('author', 'category').prefetch_related('tags')
         
         return queryset.order_by('-created_at')
 
@@ -108,7 +108,7 @@ class CombinedFeedView(generics.ListAPIView):
         
         trending_ids = list(trending_posts.values_list('id', flat=True))
 
-        all_posts = Post.objects.is_published().filter(
+        all_posts = Post.objects.is_draft().filter(
             Q(id__in=personalized_posts.values_list('id', flat=True)) |
             Q(id__in=trending_ids),
         ).select_related('author', 'category').prefetch_related('tags')
