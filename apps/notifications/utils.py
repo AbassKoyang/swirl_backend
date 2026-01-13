@@ -3,7 +3,7 @@ from .models import Notification
 from .services import send_email_notification, send_push_notification
 
 
-def create_notification(user, actor, action_type, target_object=None, send_email=True, send_push=True):
+def create_notification(user, actor, action_type, target_object=None, send_push=True):
     if user == actor and target_object is not None:
         return None
     
@@ -25,12 +25,6 @@ def create_notification(user, actor, action_type, target_object=None, send_email
                 content_type=content_type,
                 object_id=target_object.pk
             )
-        
-        if send_email:
-            email_sent = send_email_notification(notification)
-            if email_sent:
-                notification.email_sent = True
-                notification.save(update_fields=['email_sent'])
         
         if send_push:
             push_sent = send_push_notification(notification)

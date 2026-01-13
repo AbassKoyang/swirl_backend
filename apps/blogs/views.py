@@ -14,6 +14,7 @@ from apps.notifications.utils import create_notification
 from .serializers import CommentSerializer, PostSerializer, CategorySerializer, ReactionSerializer, BookmarkSerializer
 
 from .models import Post, Category, Comment, Reaction, Bookmark
+from apps.core.models import User
 # Create your views here
 
 class PostsListCreateView(generics.ListCreateAPIView):
@@ -369,6 +370,16 @@ class BookmarkDeleteView(generics.DestroyAPIView):
 class ListUserBookmarksView(generics.ListAPIView):
     serializer_class = BookmarkSerializer
     permission_classes = [permissions.IsAuthenticated, IsBookmarkOwner]
+    def  get_queryset(self):
+        userId = self.kwargs['id']
+        user = generics.get_object_or_404(User, pk=userId)
+        return Bookmark.objects.filter(user=user).select_related('post').select_related('user')
+        
+class ListUserPostsView(generics.ListAPIView):
+    serializer_class = PostSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
     def  get_queryset(self):
-        return Bookmark.objects.filter(user=self.request.user).select_related('post').select_related('user')
+        userId = self.kwargs['id']
+        user = generics.get_object_or_404(User, pk=userId)
+        return Post.objects.filter(author=user).select_related('author')

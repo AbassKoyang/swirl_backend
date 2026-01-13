@@ -257,6 +257,7 @@ class PasswordResetConfirmView(APIView):
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
+    permission_classes =[AllowAny]
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
 
@@ -428,4 +429,24 @@ class ListFollowingView(generics.ListAPIView):
         user_id = self.kwargs['id']
         user = get_object_or_404(User, pk=user_id)
         return Follow.objects.filter(follower=user).select_related('follower', 'following')
+
+class IsFollowingView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, **kwargs):
+        user_id = self.kwargs['id']
+        target_user = get_object_or_404(User, pk=user_id)
+
+        is_following = Follow.objects.filter(
+            follower=request.user,
+            following=target_user
+        ).exists()
+
+        return Response(
+            {
+                "is_following": is_following
+            },
+            status=status.HTTP_200_OK
+        )
+
 
