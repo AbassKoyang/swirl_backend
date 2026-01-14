@@ -9,7 +9,7 @@ class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     class Meta:
         model = User
-        fields = ['id', 'email', 'password', 'first_name', 'last_name', 'profile_pic_url', 'bio', 'phone_number', 'address', 'city', 'state', 'country', 'website', 'linkedin', 'instagram', 'twitter', 'github', 'registration_method', 'created_at', 'updated_at']
+        fields = ['id', 'email', 'password', 'first_name', 'last_name', 'profile_pic_url', 'banner_url', 'bio', 'followers_count', 'following_count', 'about', 'phone_number', 'address', 'city', 'state', 'country', 'website', 'linkedin', 'instagram', 'twitter', 'github', 'registration_method', 'created_at', 'updated_at']
 
     def create(self, validated_data):
         user = User.objects.create_user(**validated_data)
@@ -18,7 +18,7 @@ class UserSerializer(serializers.ModelSerializer):
 class UserSummarySerializer(serializers.ModelSerializer):
     class Meta: 
         model = User
-        fields = ['id', 'email', 'first_name', 'last_name', 'profile_pic_url']
+        fields = ['id', 'email', 'first_name', 'last_name', 'profile_pic_url', 'bio', 'about']
 
 
 class PasswordResetRequestSerializer(serializers.Serializer):

@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.db.models import F
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 from .models import User, Follow
@@ -377,7 +378,14 @@ class FollowUserView(APIView):
                 {"message": "You are already following this user"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+        User.objects.filter(
+                pk=user_id).update(
+                followers_count=F("followers_count") + 1
+        )
+        User.objects.filter(
+                pk=request.user.id,
+                ).update(following_count=F("following_count") + 1)
+
         create_notification(
             user=user_to_follow,
             actor=request.user,
@@ -398,6 +406,15 @@ class FollowUserView(APIView):
                 following=user_to_unfollow
             )
             follow.delete()
+            User.objects.filter(
+            pk=user_id).update(
+            followers_count=F("followers_count") - 1
+            )
+            User.objects.filter(
+            pk=request.user.id,
+            following_count__gt=0
+            ).update(following_count=F("following_count") - 1)
+
             return Response(
                 {"message": "Successfully unfollowed user"},
                 status=status.HTTP_200_OK
