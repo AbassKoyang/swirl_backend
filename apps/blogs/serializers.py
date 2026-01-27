@@ -1,4 +1,5 @@
-from rest_framework import serializers
+from django.contrib.auth.models import ContentType
+from rest_framework import generics, serializers
 
 from apps.core.serializers import UserSummarySerializer
 from .models import Category, Comment, Post, Reaction, Bookmark, Tag
@@ -34,14 +35,43 @@ class PostSerializer(serializers.ModelSerializer):
         source='category',
         write_only=True
     )
+    is_liked = serializers.SerializerMethodField()
+    is_bookmarked = serializers.SerializerMethodField()  
 
     class Meta:
         model = Post
-        fields = ['id', 'content', 'subtitle', 'title', 'author', 'tags', 'tag_objects', 'category', 'category_id', 'slug', 'thumbnail', 'status', 'comment_count', 'reaction_count', 'bookmark_count', 'views_count', 'word_count', 'paragraph_count', 'read_time', 'created_at', 'updated_at' ]
+        fields = ['id', 'content', 'subtitle', 'title', 'author', 'tags', 'tag_objects', 'category', 'category_id', 'slug', 'thumbnail', 'status', 'comment_count', 'reaction_count', 'bookmark_count', 'views_count', 'word_count', 'paragraph_count', 'read_time', 'is_liked', 'is_bookmarked', 'created_at', 'updated_at' ]
         read_only_fields = ['author', 'category', 'comment_count', 'reaction_count', 'bookmark_count', 'views_count']
+
     def create(self, validated_data):
         validated_data['author'] = self.context['request'].user
         return super().create(validated_data)
+
+    def get_is_liked(self, obj):
+        request = self.context.get('request')
+        post_id = obj.id
+        post = generics.get_object_or_404(Post, pk=post_id)
+        post_type = ContentType.objects.get_for_model(Post)
+        if not request or not request.user.is_authenticated:
+            return False
+
+        return Reaction.objects.filter(
+            user=request.user,
+            content_type=post_type,
+            object_id=post.id
+        ).exists()
+
+    def get_is_bookmarked(self, obj):
+        request = self.context.get('request')
+        post_id = obj.id
+        post = generics.get_object_or_404(Post, pk=post_id)
+        if not request or not request.user.is_authenticated:
+            return False
+
+        return Bookmark.objects.filter(
+            user=request.user,
+            post=post
+        ).exists()
 
 class PostSummarySerializer(serializers.ModelSerializer):
     class Meta:

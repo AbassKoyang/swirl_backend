@@ -204,7 +204,7 @@ class RepliesListCreateView(generics.ListCreateAPIView):
 
 class PostReactionListCreateView(generics.ListCreateAPIView):
     serializer_class = ReactionSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
     
     def get_throttles(self):
         if self.request.method == 'GET':
