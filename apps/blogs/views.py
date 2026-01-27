@@ -85,10 +85,9 @@ class PostDeleteView(generics.DestroyAPIView):
 class PostRetrieveView(generics.RetrieveAPIView):
     queryset= Post.objects.all()
     serializer_class = PostSerializer
-    permission_classes = [IsOwner]
     throttle_classes = [PostReadRateThrottle]
-    lookup_field = 'pk'
-    lookup_url_kwarg='id'
+    lookup_field = 'slug'
+    lookup_url_kwarg='slug'
     
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()

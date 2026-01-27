@@ -81,6 +81,8 @@ class Post(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        unique_together=("author", "slug")
+
     
     def __str__(self):
         return self.title
