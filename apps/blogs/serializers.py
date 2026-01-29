@@ -81,6 +81,7 @@ class PostSummarySerializer(serializers.ModelSerializer):
 class CommentSerializer(serializers.ModelSerializer):
     user = UserSummarySerializer(read_only=True)
     post = PostSummarySerializer(read_only=True)
+    is_liked = serializers.SerializerMethodField()
 
     parent_id = serializers.PrimaryKeyRelatedField(
         queryset=Comment.objects.all(),
@@ -90,7 +91,7 @@ class CommentSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Comment
-        fields = ['id', 'post', 'user', 'content', 'parent_id', 'reply_count', 'reaction_count', 'views_count', 'created_at', 'updated_at']
+        fields = ['id', 'post', 'user', 'content', 'parent_id', 'is_liked', 'reply_count', 'reaction_count', 'views_count', 'created_at', 'updated_at']
         read_only_fields = ['post', 'user', 'reply_count', 'reaction_count', 'views_count', 'created_at', 'updated_at']
 
     def validate_parent(self, parent):
@@ -99,6 +100,20 @@ class CommentSerializer(serializers.ModelSerializer):
                 "You cannot reply to a reply."
             )
         return parent
+
+    def get_is_liked(self, obj):
+        request = self.context.get('request')
+        comment_id = obj.id
+        comment = generics.get_object_or_404(Comment, pk=comment_id)
+        comment_type = ContentType.objects.get_for_model(Comment)
+        if not request or not request.user.is_authenticated:
+            return False
+
+        return Reaction.objects.filter(
+            user=request.user,
+            content_type=comment_type,
+            object_id=comment.id
+        ).exists()
 
 class ReactionSerializer(serializers.ModelSerializer):
     user = UserSummarySerializer(read_only=True)
