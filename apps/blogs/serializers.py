@@ -87,10 +87,18 @@ class CommentSerializer(serializers.ModelSerializer):
         source="parent",
         required=False
     )
+    
     class Meta:
         model = Comment
         fields = ['id', 'post', 'user', 'content', 'parent_id', 'reply_count', 'reaction_count', 'views_count', 'created_at', 'updated_at']
         read_only_fields = ['post', 'user', 'reply_count', 'reaction_count', 'views_count', 'created_at', 'updated_at']
+
+    def validate_parent(self, parent):
+        if parent.parent is not None:
+            raise serializers.ValidationError(
+                "You cannot reply to a reply."
+            )
+        return parent
 
 class ReactionSerializer(serializers.ModelSerializer):
     user = UserSummarySerializer(read_only=True)

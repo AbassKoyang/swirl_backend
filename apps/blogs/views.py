@@ -101,7 +101,6 @@ class PostRetrieveView(generics.RetrieveAPIView):
 
 class CommentsListCreateView(generics.ListCreateAPIView):
     serializer_class = CommentSerializer
-    queryset = Comment.objects.all()
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     
     def get_throttles(self):
@@ -110,16 +109,29 @@ class CommentsListCreateView(generics.ListCreateAPIView):
         return [CommentCreateRateThrottle()]
 
     def get_queryset(self):
+        order_type = self.request.query_params.get('order_type')
         post_id = self.kwargs["id"]
-        return super().get_queryset().filter(post_id=post_id,parent__isnull=True).select_related('user')
+        queryset = Comment.objects.filter(post_id=post_id,parent__isnull=True).select_related('user')
+        if order_type == 'relevant':
+            return queryset.extra(
+                select={'engagement_score': 'reaction_count + reply_count + views_count'}
+            ).orderby('-engagement_score', '-created_at')
+        elif order_type == 'recent':
+            return queryset.orderby('-created_at')
+        return queryset
 
     def perform_create(self, serializer):
         post_id = self.kwargs["id"]
         post = generics.get_object_or_404(Post, pk=post_id)
         comment = serializer.save(post=post, user=self.request.user)
-        Post.objects.filter(pk=post_id).update(
-            comment_count=F("comment_count") + 1
-        )
+        if comment.parent_id:
+            Comment.objects.filter(pk=comment.parent_id).update(
+                reply_count=F("reply_count") + 1
+            )
+        else:
+            Post.objects.filter(pk=post_id).update(
+                comment_count=F("comment_count") + 1
+            )
         create_notification(
             user=post.author,
             actor=self.request.user,
@@ -212,7 +224,7 @@ class PostReactionListCreateView(generics.ListCreateAPIView):
         return [ReactionRateThrottle()]
     
     def get_queryset(self):
-        reaction_type = self.request.query_params
+        reaction_type = self.request.query_params.get('reaction_type')
         post_id = self.kwargs['id']
         post = generics.get_object_or_404(Post, pk=post_id)
         if reaction_type == 'upvote':
@@ -270,7 +282,7 @@ class CommentReactionListCreateView(generics.ListCreateAPIView):
         return [ReactionRateThrottle()]
     
     def get_queryset(self):
-        reaction_type = self.request.query_params
+        reaction_type = self.request.query_params.get('reaction_type')
         comment_id = self.kwargs['id']
         comment = generics.get_object_or_404(Comment, pk=comment_id)
         if reaction_type == 'upvote':

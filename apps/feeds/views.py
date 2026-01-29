@@ -59,7 +59,7 @@ class TrendingFeedView(generics.ListAPIView):
         ).select_related('author', 'category').prefetch_related('tags')
     
         queryset = queryset.extra(
-            select={'engagement_score': 'reaction_count + comment_count + bookmark_count'}
+            select={'engagement_score': 'reaction_count + comment_count + bookmark_count + views_count'}
         ).order_by('-engagement_score', '-created_at')
         
         return queryset
