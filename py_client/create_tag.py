@@ -3,8 +3,10 @@ import requests
 
 endpoint = "http://localhost:8000/api/categories/"
 
+name = input("Name: ")
+slug = input("Slug: ")
 data = {
-    'name': 'Programming',
-    'slug': 'programming',
+    'name': name,
+    'slug': slug,
 }
 response = requests.post(endpoint, json=data);

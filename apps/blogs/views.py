@@ -77,11 +77,10 @@ class PostDeleteView(generics.DestroyAPIView):
     lookup_field = 'pk'
     lookup_url_kwarg='id'
 
-    def perform_destroy(self, serializer):
-        instance = serializer.save();
-        print(instance)
+    def perform_destroy(self, instance):
+        print("instance", instance)
         instance.is_deleted = True
-        instance.save()
+        instance.save(update_fields=['is_deleted'])
 
 class PostRetrieveView(generics.RetrieveAPIView):
     queryset= Post.objects.all()
