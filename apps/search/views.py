@@ -3,6 +3,8 @@ from django.db.models import Q
 
 from apps.blogs.models import Post, Comment, Bookmark, Category
 from apps.blogs.serializers import PostSerializer, CommentSerializer, BookmarkSerializer, CategorySerializer
+from apps.core.models import User
+from apps.core.serializers import UserSerializer
 from .throttles import SearchRateThrottle, SearchAnonRateThrottle
 
 
@@ -174,6 +176,28 @@ class CategorySearchView(generics.ListAPIView):
             queryset = queryset.filter(
                 Q(name__icontains=search_query) |
                 Q(slug__icontains=search_query)
+            ).distinct()
+        
+        queryset = queryset.order_by('-created_at')
+        
+        return queryset
+
+class UserSearchView(generics.ListAPIView):
+    serializer_class = UserSerializer
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [SearchRateThrottle]
+
+    def get_queryset(self):
+        queryset = User.objects.all()
+
+        search_query = self.request.query_params.get('q', None)
+        
+        if search_query:
+            queryset = queryset.filter(
+                Q(first_name__icontains=search_query) |
+                Q(last_name__icontains=search_query) |
+                Q(about__icontains=search_query)|
+                Q(bio__icontains=search_query)
             ).distinct()
         
         queryset = queryset.order_by('-created_at')
