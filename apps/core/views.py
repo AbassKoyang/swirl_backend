@@ -224,7 +224,8 @@ class PasswordResetRequestView(APIView):
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             token = PasswordResetTokenGenerator().make_token(user)
 
-            reset_link = f"http://localhost:5500/reset-password?uid={uid}&token={token}"
+            reset_link = f"https://inspirely.vercel.app/reset-password?uid={uid}&token={token}"
+            print(reset_link)
 
             send_mail(
                 subject="Password Reset",

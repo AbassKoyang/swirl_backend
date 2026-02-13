@@ -27,6 +27,9 @@ class PersonalizedFeedView(generics.ListAPIView):
             is_deleted=False
         ).select_related('author', 'category').prefetch_related('tags')
         
+        if not queryset.exists():
+            queryset = Post.objects.is_draft().select_related('author', 'category').prefetch_related('tags')
+        
         return queryset.order_by('-created_at')
 
 
@@ -61,6 +64,12 @@ class TrendingFeedView(generics.ListAPIView):
         queryset = queryset.extra(
             select={'engagement_score': 'reaction_count + comment_count + bookmark_count + views_count'}
         ).order_by('-engagement_score', '-created_at')
+        
+        if not queryset.exists():
+            queryset = Post.objects.is_draft().select_related('author', 'category').prefetch_related('tags')
+            queryset = queryset.extra(
+                select={'engagement_score': 'reaction_count + comment_count + bookmark_count + views_count'}
+            ).order_by('-engagement_score', '-created_at')
         
         return queryset
 
@@ -106,12 +115,15 @@ class CombinedFeedView(generics.ListAPIView):
             select={'engagement_score': 'reaction_count + comment_count + bookmark_count'}
         ).order_by('-engagement_score')[:10]
         
+        personalized_ids = list(personalized_posts.values_list('id', flat=True))
         trending_ids = list(trending_posts.values_list('id', flat=True))
 
-        all_posts = Post.objects.is_draft().filter(
-            Q(id__in=personalized_posts.values_list('id', flat=True)) |
-            Q(id__in=trending_ids),
-        ).select_related('author', 'category').prefetch_related('tags')
+        if personalized_ids or trending_ids:
+            all_posts = Post.objects.is_draft().filter(
+                Q(id__in=personalized_ids) | Q(id__in=trending_ids),
+            ).select_related('author', 'category').prefetch_related('tags')
+        else:
+            all_posts = Post.objects.is_draft().select_related('author', 'category').prefetch_related('tags')
         
         return all_posts.order_by('-created_at')
 
