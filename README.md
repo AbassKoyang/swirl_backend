@@ -2,7 +2,7 @@
 
 A comprehensive Django REST Framework backend for a social media/blogging platform similar to Twitter/Medium. This backend provides APIs for user management, posts, comments, reactions, bookmarks, search, feeds, notifications, and more.
 
-## 🚀 Features
+## 🚀 Feature
 
 ### Core Features
 - **User Authentication & Management**
