@@ -54,7 +54,7 @@ class RegisterUser(generics.CreateAPIView):
             value=str(refresh.access_token),
             httponly=True,
             secure=True,
-            samesite="Lax",
+            samesite="None",
             max_age=60 * 60 * 24,
             path='/'
         )
@@ -64,7 +64,7 @@ class RegisterUser(generics.CreateAPIView):
             value=str(refresh),
             httponly=True,
             secure=True,
-            samesite="Lax",
+            samesite="None",
             max_age=60 * 60 * 24,
             path='/'
         )
@@ -190,7 +190,7 @@ def google_login(request):
             value=str(refresh.access_token),
             httponly=True,
             secure=True,
-            samesite="Lax",
+            samesite="None",
             max_age=60 * 30,
             path='/'
         )
@@ -200,7 +200,7 @@ def google_login(request):
             value=str(refresh),
             httponly=True,
             secure=True,
-            samesite="Lax",
+            samesite="None",
             max_age=(60 * 60 * 24) * 7,
             path='/'
         )
@@ -280,7 +280,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 value=access,
                 httponly=True,
                 secure=True, 
-                samesite="Lax",
+                samesite="None",
                 max_age=60 * 30,
                 path='/'
             )
@@ -290,7 +290,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 value=refresh,
                 httponly=True,
                 secure=True,
-                samesite="Lax",
+                samesite="None",
                 max_age=(60 * 60 * 24) * 7,
                 path='/'
             )
@@ -342,7 +342,7 @@ class CookieTokenRefreshView(TokenRefreshView):
                 value=response.data["access"],
                 httponly=True,
                 secure=True, 
-                samesite="Lax",
+                samesite="None",
                 max_age=60 * 30,
                 path='/'
             )
@@ -352,7 +352,7 @@ class CookieTokenRefreshView(TokenRefreshView):
                 value=response.data["refresh"],
                 httponly=True,
                 secure=True,
-                samesite="Lax",
+                samesite="None",
                 max_age=(60 * 60 * 24) * 7,
                 path='/'
             )
