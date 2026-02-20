@@ -71,7 +71,7 @@ DEFAULT_FROM_EMAIL = "no-reply@example.com"
 
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
 
-FIREBASE_CREDENTIALS_PATH = BASE_DIR / 'config' / 'firebase-credentials.json'
+FIREBASE_CREDENTIALS_PATH = BASE_DIR / 'firebase-credentials.json'
 # Option 2: Or use environment variable (for production)
 # FIREBASE_CREDENTIALS_JSON = config('FIREBASE_CREDENTIALS_JSON', default=None)
 
