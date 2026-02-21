@@ -47,6 +47,7 @@ class PostsListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         print(serializer.validated_data)
         validated_data = serializer.validated_data
+        print(validated_data)
         tag_names = validated_data.pop("tags", [])
         tags = []
         for name in tag_names:
@@ -56,8 +57,13 @@ class PostsListCreateView(generics.ListCreateAPIView):
             )
             tags.append(tag)
         serializer.save(author=self.request.user, tags=tags)
-        category = generics.get_object_or_404(Category, pk=validated_data.category_id)
-        category.update(posts_count=F("posts_count") + 1)
+        category = generics.get_object_or_404(Category, pk=validated_data['category'].id)
+        print(category)
+        Category.objects.filter(
+                pk=validated_data['category'].id
+            ).update(
+                posts_count=F("posts_count") + 1
+            )
 
 class PostsUpdateView(generics.UpdateAPIView):
     queryset= Post.objects.all()
@@ -83,6 +89,12 @@ class PostDeleteView(generics.DestroyAPIView):
         print("instance", instance)
         instance.is_deleted = True
         instance.save(update_fields=['is_deleted'])
+        category = generics.get_object_or_404(Category, pk=instance.category)
+        print(category)
+        Category.objects.filter(pk=category.id, 
+        posts_count__gt=0).update(
+                posts_count=F("posts_count") + 1
+        )
 
 class PostRetrieveView(generics.RetrieveAPIView):
     queryset= Post.objects.all()
