@@ -1,7 +1,7 @@
 from django.contrib.auth.models import ContentType
 from rest_framework import generics, serializers
 
-from apps.core.serializers import UserSummarySerializer
+from apps.core.serializers import UserSerializer, UserSummarySerializer
 from .models import Category, Comment, Post, Reaction, Bookmark, Tag
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -124,8 +124,8 @@ class ReactionSerializer(serializers.ModelSerializer):
         read_only_fields = ['user', 'created_at']
 
 class BookmarkSerializer(serializers.ModelSerializer):
-    user = UserSummarySerializer(read_only=True)
-    post = PostSummarySerializer(read_only=True)
+    user = UserSerializer(read_only=True)
+    post = PostSerializer(read_only=True)
 
     class Meta:
         model = Bookmark

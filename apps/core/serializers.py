@@ -29,9 +29,22 @@ class UserSerializer(serializers.ModelSerializer):
         ).exists()
 
 class UserSummarySerializer(serializers.ModelSerializer):
+    is_following = serializers.SerializerMethodField()
     class Meta: 
         model = User
-        fields = ['id', 'email', 'first_name', 'last_name', 'profile_pic_url', 'bio', 'about']
+        fields = ['id', 'email', 'first_name', 'last_name', 'profile_pic_url', 'bio', 'about', 'is_following']
+
+    def get_is_following(self, obj):
+        request = self.context.get('request')
+        user_id = obj.id
+        user = generics.get_object_or_404(User, pk=user_id)
+        if not request or not request.user.is_authenticated:
+            return False
+
+        return Follow.objects.filter(
+            follower=request.user,
+            following=user
+        ).exists()
 
 
 class PasswordResetRequestSerializer(serializers.Serializer):

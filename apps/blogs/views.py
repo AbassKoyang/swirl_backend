@@ -1,8 +1,9 @@
 
 from django.db.models import F
-from rest_framework import generics, filters, permissions, pagination
+from rest_framework import generics, filters, permissions, pagination, status
 from rest_framework.response import Response
 from django.contrib.contenttypes.models import ContentType
+from rest_framework.views import APIView
 
 from .permissions import IsCommentOwner, IsOwner, IsBookmarkOwner
 from .throttles import (
@@ -392,27 +393,32 @@ class BookmarkCreateView(generics.CreateAPIView):
                 target_object=post
             )
 
-class BookmarkDeleteView(generics.DestroyAPIView):
-    queryset = Bookmark.objects.all()
-    serializer_class = BookmarkSerializer
-    permission_classes = [permissions.IsAuthenticated, IsBookmarkOwner]
-    lookup_field = 'pk'
-    lookup_url_kwarg = 'id'
+class BookmarkDeleteView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
 
-    def perform_destroy(self, instance):
-        post_id = self.kwargs['id']
-        post = generics.get_object_or_404(Post, pk=post_id)
-        if post:
-            Bookmark.objects.filter(
-                post=post_id,
-                user=self.request.user
-            ).delete()
-            Post.objects.filter(
-                pk=post_id,
-                bookmark_count__gt=0
-            ).update(
-                bookmark_count=F("bookmark_count") - 1
+    def delete(self, request, id):
+        post = generics.get_object_or_404(Post, pk=id)
+
+        bookmark = Bookmark.objects.filter(
+            user=request.user,
+            post=post
+        ).first()
+
+        if not bookmark:
+            return Response(
+                {"detail": "Bookmark not found"},
+                status=status.HTTP_404_NOT_FOUND
             )
+
+        bookmark.delete()
+
+        post.bookmark_count = F("bookmark_count") - 1
+        post.save(update_fields=["bookmark_count"])
+
+        return Response(
+            {"detail": "Bookmark removed"},
+            status=status.HTTP_200_OK
+        )
 
 class ListUserBookmarksView(generics.ListAPIView):
     serializer_class = BookmarkSerializer
@@ -420,7 +426,7 @@ class ListUserBookmarksView(generics.ListAPIView):
     def  get_queryset(self):
         userId = self.kwargs['id']
         user = generics.get_object_or_404(User, pk=userId)
-        return Bookmark.objects.filter(user=user).select_related('post').select_related('user')
+        return Bookmark.objects.filter(user=self.request.user).select_related('post').select_related('user')
 
 class ListUserCommentsView(generics.ListAPIView):
     serializer_class = CommentSerializer
