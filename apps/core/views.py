@@ -247,8 +247,20 @@ class LogoutView(APIView):
             "status": True,
             "message": "Logged out successfully"
         })
-        response.delete_cookie("access_token")
-        response.delete_cookie("refresh_token")
+        response.delete_cookie(
+            key="refresh_token",
+            httponly=True,
+            secure=True,
+            samesite="None",
+            path='/'
+        )
+        response.delete_cookie(
+            key="access_token",
+            httponly=True,
+            secure=True,
+            samesite="None",
+            path='/'
+        )
         return response
 
 
