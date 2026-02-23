@@ -249,15 +249,11 @@ class LogoutView(APIView):
         })
         response.delete_cookie(
             key="refresh_token",
-            httponly=True,
-            secure=True,
             samesite="None",
             path='/'
         )
         response.delete_cookie(
             key="access_token",
-            httponly=True,
-            secure=True,
             samesite="None",
             path='/'
         )
